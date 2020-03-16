@@ -1,0 +1,86 @@
+import random
+
+def file():
+    with open(r'/Users/junizhu/Documents/GitHub/game_many_user.txt',encoding='utf-8') as f:
+        data_list = f.readlines()
+        for name in data_list:
+            data = data_list.strip().split()
+            dict_f = {}
+            dict_f[data[0]] = data[1:]
+        print("dictionary", dict_f)
+
+        if not data_list:
+            data_list = ['0', '0', '99', '0']
+            dict_f = {data_list[0]: data_list[1:]}
+
+        round = int(data[1])
+        record = int(data[2])
+        avg = float(data[3])
+
+        return dict_f, round, record, avg
+
+def csz():
+    cszflag = True
+    while cszflag:
+        ans = input("请猜一个1-100之间的整数: ")
+        try:
+            ans = int(ans)
+            if 0 < ans < 100:
+                return ans
+            else:
+                print("你输入的值不在1-100范围内")
+        except:
+            print("输入有误，请确定输入一个整数")
+
+def daxiao(ans, A):
+    if ans < A:
+        print("猜小了")
+    elif ans > A:
+        print("猜大了")
+    else:
+        print("猜对了")
+        return "恭喜恭喜"
+
+def guessnumber():
+    name = str(input("请输入你的名字"))
+    file()
+    if dict_f.get(name) != 'None':
+        print(f"{name}, 欢迎回来！你的历史最佳成绩为：你一共玩了{round}次，最少{record}轮猜中答案，平均用{avg}轮猜对")
+    else:
+        print("欢迎新朋友来到猜数字猜猜猜！")
+
+    round = True
+    while round:
+        print(name, "来玩一轮游戏吧?\n", "继续游戏 输入y\n", "退出游戏 输入e")
+        k = input()
+        if str(k) == "y" or str(k) == "Y":
+            round += 1
+            print(("-----------现在是第%d次游戏-----------")% r)
+            A = random.randint(1, 100)
+            print(A)
+            tt = 0
+            gnflag = True
+            while gnflag:
+                tt += 1
+                ans = csz()
+                result = daxiao(ans, A)
+                if result == "恭喜恭喜":
+                    record.append(tt)
+                    min_tt = min(record)
+                    avg = float(sum(record)/len(record))
+                    print(("恭喜恭喜，%s猜对了！你一共玩了%d次，最少%d轮猜中答案，平均用%.1f轮猜对") % (name, round, min_tt, avg))
+                    summary = [name, round, min_tt, avg]
+                    new_dict = {}
+                    new_dict[summary[0]] = summary[1:]
+                    dict_f.update(new_dict)
+                    break
+        elif str(k) == "e" or str(k) == "E":
+            print("游戏结束，欢迎下次再来")
+            for key, value in dict.items(dict_f):
+                data2 = str(value)
+                with open(r'/Users/junizhu/Documents/GitHub/game_one_user.txt', encoding='utf-8') as f:
+                    f.write(key+'\n')
+                    f.write(data2+'\n')
+
+guessnumber()
+
