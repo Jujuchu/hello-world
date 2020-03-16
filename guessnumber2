@@ -1,0 +1,70 @@
+import random
+
+def file():
+    with open(r'/Users/junizhu/Documents/GitHub/game_one_user.txt',encoding='utf-8') as f:
+        data = f.read().split()
+        dict_f = {data[0]:data[1:]}
+        print(dict)
+        if not data:
+            data = ['0', '0', '99', '0']
+        return data[0], data[1], data[2], data[3]
+
+def csz():
+    cszflag = True
+    while cszflag:
+        ans = input("请猜一个1-100之间的整数: ")
+        try:
+            ans = int(ans)
+            if 0 < ans < 100:
+                return ans
+            else:
+                print("你输入的值不在1-100范围内")
+        except:
+            print("输入有误，请确定输入一个整数")
+
+def daxiao(ans, A):
+    if ans < A:
+        print("猜小了")
+    elif ans > A:
+        print("猜大了")
+    else:
+        print("猜对了")
+        return "恭喜恭喜"
+
+def guessnumber():
+    i = str(input("请输入你的名字"))
+    file()
+    if name in file():
+        print(f"{file[0]}, 欢迎回来！你的历史最佳成绩为：你一共玩了{file[1]}次，最少{file[2]}轮猜中答案，平均用{file[3]}轮猜对")
+    else:
+        print("欢迎新朋友来到猜数字猜猜猜！")
+    r = int(data[1])
+    record = int(data[2])
+    round = True
+    while round:
+        print(i, "来玩一轮游戏吧?\n", "继续游戏 输入y\n", "退出游戏 输入e")
+        k = input()
+        if str(k) == "y" or str(k) == "Y":
+            r += 1
+            print(("-----------现在是第%d次游戏-----------")% r)
+            A = random.randint(1, 100)
+            print(A)
+            tt = 0
+            gnflag = True
+            while gnflag:
+                tt += 1
+                ans = csz()
+                result = daxiao(ans, A)
+                if result == "恭喜恭喜":
+                    record.append(tt)
+                    min_tt = min(record)
+                    ave = float(sum(record)/len(record))
+                    print(("恭喜恭喜，%s猜对了！你一共玩了%d次，最少%d轮猜中答案，平均用%.1f轮猜对") % (i, r, min_tt, ave))
+                    input = '%s %d %d %d' % (i, r, min_tt, ave)
+                    break
+        elif str(k) == "e" or str(k) == "E":
+            print("游戏结束，欢迎下次再来")
+            with open(r'/Users/junizhu/Documents/GitHub/game_one_user.txt', encoding='utf-8') as f:
+                f.write(input)
+
+guessnumber()
