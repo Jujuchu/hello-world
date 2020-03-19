@@ -1,0 +1,435 @@
+作者：小生
+链接：https://zhuanlan.zhihu.com/p/111607914
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+另外，我这个练习只是入门时候的一个学习过程，这个代码还有很大的提升空间，比如下面的几个改进可以更进一步的提升模型的预测精度，有兴趣的也可以尝试一下：• 模型方面，你还可以尝试lightgbm，这也是一个非常优秀的boosting类模型；• 可以使用神经网络模型，你可以参考Kaggle discussion里的一个优秀的solution，也就是使用 Entity Embedding ,可以参考：https://arxiv.org/abs/1604.06737https://github.com/entron/entity-embedding-rossmann• 现有数据中大部分都与时间有关，与空间相关的数据很少。考虑到天气因素对销售额可能造成的影响，可以加入额外数据，例如按照各个药店所在的州统计的天气和降雨量数据
+
+Rossmann Sales Top1% http://link.zhihu.com/?target=https%3A//www.kaggle.com/xwxw2929/rossmann-sales-top1/notebook
+
+# 为这个项目导入需要的库
+import numpy as np
+import pandas as pd
+from time import time
+from IPython.display import display # 允许为DataFrame使用display()
+import matplotlib.pyplot as plt
+import xgboost as xgb
+import time
+
+# 导入附加的可视化代码visuals.py
+#import visuals as vs
+
+# 为notebook提供更加漂亮的可视化
+get_ipython().run_line_magic('matplotlib', 'inline')
+store = pd.read_csv("store.csv")
+sample = pd.read_csv("sample_submission.csv")
+test= pd.read_csv("test.csv")
+train = pd.read_csv("train.csv")
+display(train.isnull().sum(),store.isnull().sum())
+#store数据中的缺失量比较大，需要详细分析缺失内容
+#店铺竞争者的距离为无，同时竞争者开店的年月也为无，认为该店铺附近无竞争者，因此用数据0填充
+store[pd.isnull(store.CompetitionDistance)]
+#CompetitionOpenSinceMonth为空值时有CompetitionDistance的信息，因此用中值填充
+store[pd.isnull(store.CompetitionOpenSinceMonth)].head()
+#Promo2SinceWeek 和 Promo2SinceYear的空值数量一直，且查看了部分的空值时的商店信息，promo2均为0，因此采用0填充
+store[pd.isnull(store.Promo2SinceWeek)].head()
+
+#数据填充
+store=store.fillna({'Promo2SinceWeek':0,'Promo2SinceYear':0,'CompetitionDistance':0,'PromoInterval':0})
+store['CompetitionOpenSinceMonth']=store['CompetitionOpenSinceMonth'].fillna(store['CompetitionOpenSinceMonth'].median())
+store['CompetitionOpenSinceYear']=store['CompetitionOpenSinceYear'].fillna(store['CompetitionOpenSinceYear'].median())
+
+
+# 数据的可视化分析
+# 在train的数据集中，只有sales的数量不确定在哪个范围内的，其他的参数都是有规律的
+# #可视化这个参数，如果分布严重的非正态分布，考虑是否需要需要归一化处理
+
+
+fig = plt.figure(figsize = (7,5));
+ax=fig.add_subplot(1,1,1)
+ax.hist(train['Sales'],bins=25)
+ax.set_title("Sales Feature Distribution", fontsize = 14)
+ax.set_xlabel("Values")
+ax.set_ylabel("Number of Records")
+ax.set_ylim((0,300000))
+fig.show()
+
+train['Sales'] = train['Sales'].apply(lambda x: np.log(x + 1))
+fig = plt.figure(figsize = (7,5));
+ax=fig.add_subplot(1,1,1)
+ax.hist(train['Sales'],bins=25)
+ax.set_title("Sales Feature Distribution", fontsize = 14)
+ax.set_xlabel("Values")
+ax.set_ylabel("Number of Records")
+ax.set_ylim((0,300000))
+fig.show()
+# store数据集的分析
+
+fig = plt.figure(figsize = (7,5));
+ax=fig.add_subplot(1,1,1)
+ax.hist(store['CompetitionDistance'],bins=25)
+ax.set_title("CompetitionDistance Feature Distribution", fontsize = 14)
+ax.set_xlabel("Values")
+ax.set_ylabel("Number of Records")
+ax.set_ylim((0,700))
+fig.show()
+
+store['CompetitionDistance'] = store['CompetitionDistance'].apply(lambda x: np.log(x + 1))
+fig = plt.figure(figsize = (7,5));
+ax=fig.add_subplot(1,1,1)
+ax.hist(store['CompetitionDistance'],bins=25)
+ax.set_title("CompetitionDistance Feature Distribution", fontsize = 14)
+ax.set_xlabel("Values")
+ax.set_ylabel("Number of Records")
+ax.set_ylim((0,600))
+fig.show()
+
+test_new=pd.merge(test,store,on='Store')
+
+mappings={'a':1,'b':2,'c':3,'d':4}
+test_new.StoreType.replace(mappings,inplace=True)
+test_new.Assortment.replace(mappings,inplace=True)
+test_new.StateHoliday.replace(mappings,inplace=True)
+
+#Date 分成年月日
+test_new['Year']=test_new.Date.apply(lambda x:x.split('-')[0])
+test_new['Year']=test_new['Year'].astype(float)
+test_new['Month']=test_new.Date.apply(lambda x:x.split('-')[1])
+test_new['Month']=test_new['Month'].astype(float)
+test_new['Day']=test_new.Date.apply(lambda x:x.split('-')[2])
+test_new['Day']=test_new['Day'].astype(float)
+
+#新增竞争者是否开业
+test_new['CompetitionOpen']=12*(test_new.Year-test_new.CompetitionOpenSinceYear)+(test_new.Month-test_new.CompetitionOpenSinceMonth)
+test_new['CompetitionOpen']=test_new.CompetitionOpen.apply(lambda x:x if x>0 else 0)
+
+test_new.head(2)
+
+#判断train数据的当天是否有促销
+month2str = {1:'Jan', 2:'Feb', 3:'Mar', 4:'Apr', 5:'May', 6:'Jun',7:'Jul', 8:'Aug',9:'Sept',10:'Oct',11:'Nov', 12:'Dec'}
+test_new['monthStr'] = test_new.Month.map(month2str)
+test_new.loc[test_new.PromoInterval == 0, 'PromoInterval'] = ''
+test_new['IsPromoMonth'] = 0
+for interval in test_new.PromoInterval.unique():
+    if interval != '':
+        for month in interval.split(','):
+            test_new.loc[(test_new.monthStr == month) & (test_new.PromoInterval == interval), 'IsPromoMonth'] = 1
+            
+#去除掉重复的特征 
+test_new_final=test_new.drop(['Id','IsPromoMonth','Date','Promo2','Promo2SinceWeek','Promo2SinceYear','PromoInterval','monthStr',
+                              'CompetitionOpenSinceMonth','CompetitionOpenSinceYear','Open'],axis=1)
+#在train和test数据中已经有是否有促销信息了，因此将store中的促销信息删除，不作为特征考虑
+test_new_final=test_new_final.astype(float)
+test_new_final.head(10)   
+
+train_new=pd.merge(train,store,on='Store')
+train_new=train_new[(train_new['Open']==1)&(train_new['Sales']>0)&(train_new['Customers']>0)]
+
+
+mappings={'a':1,'b':2,'c':3,'d':4}
+train_new.StoreType.replace(mappings,inplace=True)
+train_new.Assortment.replace(mappings,inplace=True)
+train_new.StateHoliday.replace(mappings,inplace=True)
+
+#Date 分成年月日
+train_new['Year']=train_new.Date.apply(lambda x:x.split('-')[0])
+train_new['Year']=train_new['Year'].astype(float)
+train_new['Month']=train_new.Date.apply(lambda x:x.split('-')[1])
+train_new['Month']=train_new['Month'].astype(float)
+train_new['Day']=train_new.Date.apply(lambda x:x.split('-')[2])
+train_new['Day']=train_new['Day'].astype(float)
+
+#新增竞争者是否开业
+train_new['CompetitionOpen']=12*(train_new.Year-train_new.CompetitionOpenSinceYear)+(train_new.Month-train_new.CompetitionOpenSinceMonth)
+train_new['CompetitionOpen']=train_new.CompetitionOpen.apply(lambda x:x if x>0 else 0)
+
+
+#判断train数据的当天是否有促销
+month2str = {1:'Jan', 2:'Feb', 3:'Mar', 4:'Apr', 5:'May', 6:'Jun',7:'Jul', 8:'Aug',9:'Sept',10:'Oct',11:'Nov', 12:'Dec'}
+train_new['monthStr'] = train_new.Month.map(month2str)
+train_new.loc[train_new.PromoInterval == 0, 'PromoInterval'] = ''
+train_new['IsPromoMonth'] = 0
+for interval in train_new.PromoInterval.unique():
+    if interval != '':
+        for month in interval.split(','):
+            train_new.loc[(train_new.monthStr == month) & (train_new.PromoInterval == interval), 'IsPromoMonth'] = 1
+            
+#去除掉重复的特征 
+train_new_final=train_new.drop(['IsPromoMonth','Date','Customers','Promo2','Promo2SinceWeek','Promo2SinceYear','PromoInterval','monthStr','CompetitionOpenSinceMonth','CompetitionOpenSinceYear','Open'],axis=1)
+#在train和test数据中已经有是否有促销信息了，因此将store中的促销信息删除，不作为特征考虑
+train_new_final=train_new_final.astype(float)
+train_new_final.head(20)
+
+
+# # 划分数据并建立预测模型
+
+features=train_new_final.drop(['Sales'],axis=1)
+Sales=train_new_final['Sales']
+
+features=train_new_final.drop(['Sales'],axis=1)
+Sales=train_new_final['Sales']
+
+from sklearn.model_selection import train_test_split
+# 将数据切分成训练集和测试集
+x_train, x_test,y_train, y_test = train_test_split(features,Sales,test_size = 0.2,random_state = 0)
+
+
+# 自定义损失函数
+
+# In[21]:
+
+
+def rmspe(y, yhat):
+    return np.sqrt(np.mean((yhat/y-1) ** 2))
+
+
+# # 尝试用不同的模型做分析
+
+
+from xgboost.sklearn import XGBRegressor
+from sklearn.model_selection import GridSearchCV,RandomizedSearchCV
+
+Model_1 = XGBRegressor(learning_rate=0.1,n_estimators=400,max_depth=8)
+start=time.clock()
+Model_1.fit(x_train.values,y_train.values,eval_set = [(x_test.values,y_test.values)])
+end=time.clock()
+print('Model_1 Running time: %s Seconds'%(end-start))
+
+y_pred = Model_1.predict(x_test.values)
+error = rmspe(y_test,y_pred)
+print("accuarcy: %.2f%%" % (error*100.0))
+
+
+print("Make predictions on the test set")
+Test_Pred = Model_1.predict(test_new_final.values)
+
+result = pd.DataFrame({"Id": test_new['Id'], 'Sales': np.expm1(Test_Pred)})
+result.to_csv("Rossmann_submission_Model_1.csv", index=False)
+
+
+# In[ ]:
+
+
+Model_2 = XGBRegressor(learning_rate=0.1,n_estimators=100,max_depth=6,min_child_weight = 1,
+                     subsample=0.8,colsample_btree=0.8,objective='reg:linear',
+                     scale_pos_weight=1,random_state=27)
+start=time.clock()
+Model_2.fit(x_train.values,y_train.values,eval_set = [(x_test.values,y_test.values)],eval_metric = "rmse",
+          early_stopping_rounds = 10)
+end=time.clock()
+print('Model_2 Running time: %s Seconds'%(end-start))
+
+### make prediction for test data
+y_pred = Model_2.predict(x_test.values)
+error = rmspe(y_test,y_pred)
+print("accuarcy: %.2f%%" % (error*100.0))
+
+
+# # 网格搜索方法调整模型的最佳参数
+
+
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+
+parameters = {
+    'min_child_weight':[2,3,4],   
+    'colsample_bytree':[0.5,0.7,1],
+    'scale_pos_weight':[0.6,0.7,0.8]
+}
+
+xlf = XGBRegressor(learning_rate=0.1,n_estimators=50,max_depth=5,min_child_weight = 1,
+                     subsample=0.8,colsample_btree=0.8,objective='reg:linear',
+                     scale_pos_weight=1,random_state=27)
+n_iter_search = 5
+
+gsearch = RandomizedSearchCV(xlf,param_distributions=parameters,n_iter=n_iter_search, cv=2, iid=False)
+
+
+
+start=time.clock()
+gsearch.fit(x_train.values,y_train.values,eval_set = [(x_test.values,y_test.values)],eval_metric = "rmse",
+            early_stopping_rounds = 20)
+end=time.clock()
+print('RandomSearch Running time: %s Seconds'%(end-start))
+
+
+
+print("Best score: %0.3f" % gsearch.best_score_)
+best_estimator = gsearch.best_estimator_
+print("Best parameters set" )
+best_estimator
+
+
+
+
+Model_3=XGBRegressor(base_score=0.5, booster='gbtree', colsample_btree=0.8,
+       colsample_bylevel=1, colsample_bynode=1, colsample_bytree=1,
+       gamma=0, importance_type='gain', learning_rate=0.1,
+       max_delta_step=0, max_depth=5, min_child_weight=4, missing=None,
+       n_estimators=50, n_jobs=1, nthread=None, objective='reg:linear',
+       random_state=27, reg_alpha=0, reg_lambda=1, scale_pos_weight=0.7,
+       seed=None, silent=None, subsample=0.8, verbosity=1)
+
+
+
+start=time.clock()
+Model_3.fit(x_train.values,y_train.values,eval_set = [(x_test.values,y_test.values)],eval_metric = "rmse",
+            early_stopping_rounds = 100)
+end=time.clock()
+print('Model_3 Running time: %s Seconds'%(end-start))
+
+
+
+### make prediction for test data
+y_pred = Model_3.predict(x_test.values)
+error = rmspe(y_test,y_pred)
+print("accuarcy: %.2f%%" % (error*100.0))
+
+
+# 网格搜索法得到的模型精度不高，说明模型精度和n_estimators和max_depth有很紧密的联系，再次选用网格搜索法仅对这两个参数进行选择
+
+
+
+parameters = {
+    'n_estimators':[100,200,300,400],   
+    'max_depth':[5,7,9]  
+}
+
+xlf = XGBRegressor(learning_rate=0.1,n_estimators=50,max_depth=5,min_child_weight = 1,
+                     subsample=0.8,colsample_btree=0.8,objective='reg:linear',
+                     scale_pos_weight=1,random_state=27)
+n_iter_search = 5
+
+gsearch = RandomizedSearchCV(xlf,param_distributions=parameters,n_iter=n_iter_search, cv=2, iid=False)
+
+start=time.clock()
+gsearch.fit(x_train.values,y_train.values,eval_set = [(x_test.values,y_test.values)],eval_metric = "rmse",
+            early_stopping_rounds = 20)
+end=time.clock()
+print('RandomSearch Running time: %s Seconds'%(end-start))
+
+print("Best score: %0.3f" % gsearch.best_score_)
+best_estimator = gsearch.best_estimator_
+print("Best parameters set" )
+best_estimator
+
+Model_4=XGBRegressor(base_score=0.5, booster='gbtree', colsample_btree=0.8,
+       colsample_bylevel=1, colsample_bynode=1, colsample_bytree=1,
+       gamma=0, importance_type='gain', learning_rate=0.1,
+       max_delta_step=0, max_depth=9, min_child_weight=1, missing=None,
+       n_estimators=2000, n_jobs=1, nthread=None, objective='reg:linear',
+       random_state=27, reg_alpha=0, reg_lambda=1, scale_pos_weight=1,
+       seed=None, silent=None, subsample=0.8, verbosity=1)
+
+
+# In[24]:
+
+
+start=time.clock()
+Model_4.fit(x_train.values,y_train.values,eval_set = [(x_test.values,y_test.values)],eval_metric = "rmse",
+            early_stopping_rounds = 100)
+end=time.clock()
+print('Model5 Running time: %s Seconds'%(end-start))
+
+y_pred = Model_4.predict(x_test.values)
+error = rmspe(y_test,y_pred)
+print("accuarcy: %.2f%%" % (error*100.0))
+
+print("Make predictions on the test set")
+Test_Pred = Model_4.predict(test_new_final.values)
+
+result = pd.DataFrame({"Id": test_new['Id'], 'Sales':np.expm1(Test_Pred)})
+result.to_csv("Rossmann_submission_Model_4.csv", index=False)
+
+#在模型4种查看数据集中的关键特征，分析计算结果是否合理
+feature_importance = Model_4.feature_importances_
+feature_importance = 100.0 * (feature_importance / feature_importance.max())
+print('特征：', test_new_final.columns)
+print('每个特征的重要性：', feature_importance)
+
+sorted_idx = np.argsort(feature_importance)
+
+pos = np.arange(sorted_idx.shape[0])
+plt.barh(pos, feature_importance[sorted_idx], align='center')
+plt.yticks(pos, test_new_final.columns[sorted_idx])
+plt.xlabel('Features')
+plt.ylabel('Importance')
+plt.title('Variable Importance')
+plt.show()
+
+
+#计算预测值和实际值之间的偏差
+res = pd.DataFrame(data =y_test)
+res['Prediction']=y_pred
+res = pd.merge(x_test,res, left_index= True, right_index=True)
+res['Ratio'] = res.Prediction/res.Sales
+res['Error'] =abs(res.Ratio-1)
+res['Weight'] = res.Sales/res.Prediction
+res.head()
+
+# 筛选出误差最大的十个值
+res.sort_values(['Error'],ascending=False,inplace= True)
+res[:10]
+
+
+
+# 计算测试集中所有值得误差
+#W为从0.99到1.009的权重数值，error为预测值乘以权重的值和测试值的误差集
+#画出的图形为权重值和误差值的关系，最小值即为误差的最小值当取权重之后
+print("weight correction")
+W=[(0.990+(i/1000)) for i in range(20)]
+S =[]
+for w in W:
+    error = rmspe(np.expm1(y_test), np.expm1(y_pred*w))
+    print('RMSPE for {:.3f}:{:.6f}'.format(w,error))
+    S.append(error)
+Score = pd.Series(S,index=W)
+Score.plot()
+BS = Score[Score.values == Score.values.min()]
+print ('Best weight for Score:{}'.format(BS))
+
+
+#为每个stroe计算权重
+#i是对每个商场的ID的循环查找
+#w将权重加载到每个商场的销量后计算误差，再用BS计算出最小值
+#a是使误差最小的权重值
+#b_ho是将a的值拓展为s1的行向量，w_ho再用extend函数转化为列向量
+#b_test是将a的值拓展为s2的向量，w_test再用extend函数转化为列向量
+L=range(1115)
+W_ho=[]
+W_test=[]
+for i in L:
+    s1 = pd.DataFrame(res[res['Store']==i+1],columns = col_1)
+    s2 = pd.DataFrame(test_new[test_new['Store']==i+1])
+    W1=[(0.990+(i/1000)) for i in range(20)]
+    S =[]
+    for w in W1:
+        error = rmspe(np.expm1(s1.Sales), np.expm1(s1.Prediction*w))
+        S.append(error)
+    Score = pd.Series(S,index=W1)
+    BS = Score[Score.values == Score.values.min()]
+    a=np.array(BS.index.values)
+    b_ho=a.repeat(len(s1))
+    b_test=a.repeat(len(s2))
+    W_ho.extend(b_ho.tolist())
+    W_test.extend(b_test.tolist())
+
+
+
+#计算加上权重的数据集误差
+y_pred_new = y_pred*W_ho
+error = rmspe(np.expm1(y_test), np.expm1(y_pred_new))
+print ('RMSPE for weight corretion {:6f}'.format(error))
+
+
+# model1  kaggle private score 0.12015
+result = pd.DataFrame({"Id": test_new['Id'], 'Sales': np.expm1(Test_Pred)})
+result.to_csv("Rossmann_submission_1.csv", index=False)
+
+# model2 kaggle private score 0.11603
+result = pd.DataFrame({"Id": test_new['Id'], 'Sales': np.expm1(Test_Pred*0.998)})
+result.to_csv("Rossmann_submission_2.csv", index=False)
+
+# model3 kaggle private score 0.11772
+result = pd.DataFrame({"Id":test_new['Id'], 'Sales': np.expm1(Test_Pred*W_test)})
+result.to_csv("Rossmann_submission_3.csv", index=False)
