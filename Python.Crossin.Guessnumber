@@ -67,4 +67,90 @@ out.close()
 
 
 
+-------------------------------------------------------------------------------------------------
+储存历史记录 邀请朋友一起来玩
+# coding: utf-8
 
+import random # 引入 random 模块
+
+name = input('请输入你的名字：') # 输入玩家名字
+
+# 打开 game_many_user.txt 这个文件，前提是要存在这么一个文件
+# 由于姓名可能为中文，存在编码问题，所以要加上参数 encoding
+f = open('game_many_user.txt', 'r', encoding='gbk')
+lines = f.readlines() # 把内容按行读取至一个list中
+f.close()
+
+scores = {} # 初始化一个空字典
+for l in lines: # 列表的每一项都是一个玩家的游戏数据，遍历每一项
+   s = l.split() # 把每一个玩家的数据拆分成list
+   scores[s[0]] = s[1:] # 第一项作为key，剩下的作为value
+
+score = scores.get(name) # 字典的 get 方法找到当前玩家的数据，如果没有这个玩家，会返回 None
+if score is None: # 如果没有找到，则是一个新玩家
+    score = [0, 0, 0]
+
+game_times = int(score[0]) # 总游戏次数
+min_times = int(score[1]) # 最快猜出的轮数
+total_times = int(score[2]) # 猜过的总轮数
+
+if game_times > 0: # 如果之前玩过，已经有游戏记录
+    avg_times = total_times / game_times
+else: # 如果第一次来玩
+    avg_times = 0
+
+print('%s，你已经玩了%d次，最少%d轮猜出答案，平均%.2f轮猜出答案，开始游戏！' % (
+    name, game_times, min_times, avg_times
+))
+
+while True:
+    num = random.randint(1, 100) # 生成一个 1 - 100 的随机数
+    times = 0 # 用 times 记录用户一次游戏猜的轮数
+
+    while True:
+        input_num = int(input('请猜一个 1 - 100 的数字：'))
+        times += 1
+
+        if num == input_num:
+            print('猜对了', '，你一共猜了%d轮' % times)
+            break
+        elif num > input_num:
+            print('猜小了，再试试')
+        else:
+            print('猜大了，再试试')
+
+    # 如果是第一次玩，或者轮数比最快猜出的轮数小，则更新最快猜出的轮数
+    if game_times == 0 or times < min_times:
+        min_times = times
+    total_times += times  # 总游戏轮数增加
+    game_times += 1  # 游戏次数增加
+
+    avg_times = total_times / game_times # 计算游戏的平均轮数
+
+    # 输出成绩信息，平均轮数保留2位小数
+    print('%s，你已经玩了%d次，最少%d轮猜出答案，平均%.2f轮猜出答案' % (
+        name, game_times, min_times, avg_times
+    ))
+    # 因为这行代码太长，我在括号后换了行。注意并不是所有位置都可以换行
+
+    more_game = input('是否继续游戏？（输入y继续，其他退出）')
+    if more_game != 'y': # 通过判断用户输入，决定是否再来一次游戏
+        print('退出游戏，欢迎下次再来！')
+        break
+
+# 更新 scores 里面对应玩家的成绩
+# 加str转成字符串，为后面的格式化做准备
+scores[name] = [str(game_times), str(min_times), str(total_times)]
+
+result = '' # 初始化一个空字符串，用来储存数据
+for n in scores:
+    # 列表的 join() 方法，把数据按照"name game_times min_times total_times"格式化为字符串
+    # 结尾要加上\n换行
+    line = n + ' ' + ' '.join(scores[n]) + '\n'
+    result += line # 添加到result中
+
+# print(result) 输出看看结果
+
+f = open('game_many_user.txt', 'w', encoding='gbk')
+f.write(result)
+f.close()
