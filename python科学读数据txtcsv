@@ -1,0 +1,441 @@
+一.txt文件
+txt文件是非常常见的文本文件了，我们能够把一些数据保存在txt文件里面，然后读取出来。
+没有例子讲的话很麻烦，所以这里结合例子给出背景来讲怎么方便的载入.txt文件到一个数组。
+首先我们这里有名叫data1.txt的data2.txt的两个文本文件。两个文件的内容相同，只是分隔符号不相同。直接贴图来看一下。
+data1.txt
+
+data2.txt
+
+一个用的是空格，一个用的是逗号。
+说了那么多前戏，我这里提供两种方法来读取这里的.txt文件
+
+Ⅰ.自己写
+自己写的意思就是用最基本的python自带的一些IO操作来做。优点就是不管文件是怎样子的，你可以随心所欲的按自己的需要来定制读写操作。但是缺点就是太过于繁琐，细节很多，对于格式简单的文件，你会发现你做了很多的无用功在里面。
+以data1.txt为例子
+
+# -*- coding: utf-8 -*-
+import numpy as np
+
+#load data
+file=open("data1.txt")
+lines=file.readlines()
+rows=len(lines)
+
+datamat=np.zeros((rows,2))
+
+row=0
+for line in lines:
+    line=line.strip().split('\t')
+    datamat[row,:]=line[:]
+    row+=1
+
+print(datamat)
+print(datamat.shape)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+结果：
+
+成功的读入了ndarray里面，程序很容易懂，有点基础的都看得懂，就不献丑了。这里为了读一个.txt文件居然写了这个多行代码。事实上，还能够更加简化。
+
+Ⅱ.调函数
+这个函数在上次的numpy介绍里面其实已经讲过了。这里再来讲一遍。
+numpy.loadtxt(fname, dtype=<type 'float'>, comments=’#’, delimiter=None, converters=None, skiprows=0, usecols=None, unpack=False, ndmin=0)
+因为之前详细说过这个函数，这里就不多说了。
+
+numpy.savetxt(fname, X, fmt=’%.18e’, delimiter=’ ‘, newline=’\n’, header=’‘, footer=’‘, comments=’#‘)
+
+作用：把一个array保存到文本文件（看作是上面函数的逆操作）
+参数：
+fname : 你想要保存的文件名（对.gz的支持参考文档）
+X : 待放入文本的array
+fmt : （可选）你保存的内容的格式，就是字符串那里面的格式控制符，这里不复习了，自己复习一下。
+delimiter : 分隔符，你自己定义。默认是空格“ ”
+newline : 新的一行，自己定义。建议定义为os.linesep.默认是“\n”，但是我有时候不管用。
+header : str, optional String that will be written at the beginning of the file.
+footer : str, optional String that will be written at the end of the file.
+comments : str, optional
+String that will be prepended to the header and footer strings, to mark them as comments. Default: ‘# ‘, as expected by e.g. numpy.loadtxt.
+
+直接举例子看怎么用的
+我们这个例子的目的就是用函数把data1.txt和data2.txt载入到array，然后把array在写到文件，分别为命名为data3.txt和data4.txt
+
+# -*- coding: utf-8 -*-
+import numpy as np
+import os
+
+#load data1.txt
+print("------Load data1.txt------")
+data1=np.loadtxt("data1.txt",delimiter=' ')
+print(data1)
+print(data1.shape)
+print("type of data1:",type(data1))
+print("type of element of data1:",data1.dtype)
+print("\n")
+#load data2.txt
+print("------Load data2.txt------")
+data2=np.loadtxt("data2.txt",delimiter=',')
+print(data2)
+print(data2.shape)
+print("type of data2:",type(data2))
+print("type of element of data2:",data2.dtype)
+print("\n")
+
+#usecols
+print("------usecols test:------")
+#use 2th column
+test=np.loadtxt("data1.txt",delimiter=' ',usecols=(1,))
+print(test)
+print(test.shape)
+print("type of test:",type(test))
+print("type of element of test:",test.dtype)
+
+
+#write test
+np.savetxt("data3.txt",data1,fmt="%5.3f",delimiter=" ",newline=os.linesep)
+np.savetxt("data4.txt",data1,fmt="%5.2f",delimiter=",",newline=os.linesep)
+np.savetxt("data5.txt",test,fmt="%.3f",delimiter=" ",newline=os.linesep)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+结果：
+
+
+
+
+
+同时，在文件夹里面新生成了3个新的.txt文件
+
+程序不用解释，就是直接调用函数就行了。然后选择不同的delimiter啊，想要的列usecols这个参数就行了。
+注意，在使用空格“ ”作为分隔符的时候，有时候要是出现了哪一行有问题什么的，你就找到哪一行，看这行后面有没有多了空格，这会导致load出问题，而且一行后面有没有空格很难发觉，需要细心一点。
+写这么的多就是介绍了两个常用的函数来读取写入.txt文件，不用什么都自己去写底层。
+
+二.csv文件
+摘抄一段百度百科：
+逗号分隔值（Comma-Separated Values，CSV，有时也称为字符分隔值，因为分隔字符也可以不是逗号），其文件以纯文本形式存储表格数据（数字和文本）。
+CSV文件由任意数目的记录组成，记录间以某种换行符分隔；每条记录由字段组成，字段间的分隔符是其它字符或字符串，最常见的是逗号或制表符。通常，所有记录都有完全相同的字段序列。
+大概有些了解就行啦。
+在一些数据竞赛里面碰到N多次数据都是.csv文件给出的，说明应用应该还算是有一些广吧。
+python内置了csv库，可以调用然后自己手动来写操作的代码。但是比较简单的方式还是使用python的pandas库中的read_csv()函数来读取。很方便。
+照样先把函数细节列出来
+pandas.read_csv(filepath_or_buffer, sep=’, ‘, delimiter=None, header=’infer’, names=None, index_col=None, usecols=None, squeeze=False, prefix=None, mangle_dupe_cols=True, dtype=None, engine=None, converters=None, true_values=None, false_values=None, skipinitialspace=False, skiprows=None, nrows=None, na_values=None, keep_default_na=True, na_filter=True, verbose=False, skip_blank_lines=True, parse_dates=False, infer_datetime_format=False, keep_date_col=False, date_parser=None, dayfirst=False, iterator=False, chunksize=None, compression=’infer’, thousands=None, decimal=’.’, lineterminator=None, quotechar=’”’, quoting=0, escapechar=None, comment=None, encoding=None, dialect=None, tupleize_cols=False, error_bad_lines=True, warn_bad_lines=True, skipfooter=0, skip_footer=0, doublequote=True, delim_whitespace=False, as_recarray=False, compact_ints=False, use_unsigned=False, low_memory=True, buffer_lines=None, memory_map=False, float_precision=None)
+
+你没有看错，这个函数就是这么长，但是平时常用的参数并不会很多，所以也不用看到了很害怕。
+
+作用：
+读取.csv文件到DataFrame中去
+参数：
+filepath_or_buffer : 表示文件系统位置，URL，文件类型对象的字符串
+sep : 分隔符，默认是’,’(因为.SCV的默认是‘，’),更加详细的参考文档。
+delimiter : 同上
+delim_whitespace : boolean, default False
+Specifies whether or not whitespace (e.g. ’ ’ or ’ ‘) will be used as the sep. Equivalent to setting sep=’\s+’. If this option is set to True, nothing should be passed in for the delimiter parameter.
+New in version 0.18.1: support for the Python parser.
+header : int or list of ints, default ‘infer’
+Row number(s) to use as the column names, and the start of the data. Default behavior is as if set to 0 if no names passed, otherwise None. Explicitly pass header=0 to be able to replace existing names. The header can be a list of integers that specify row locations for a multi-index on the columns e.g. [0,1,3]. Intervening rows that are not specified will be skipped (e.g. 2 in this example is skipped). Note that this parameter ignores commented lines and empty lines if skip_blank_lines=True, so header=0 denotes the first line of data rather than the first line of the file.
+names : array-like, default None
+List of column names to use. If file contains no header row, then you should explicitly pass header=None. Duplicates in this list are not allowed unless mangle_dupe_cols=True, which is the default.
+index_col : 整形或者序列或者False,默认是None. 这个表示的是用来作为行标签的那一列.如果传入的是一个序列,那么就是用了层次化索引(MultiIndex)
+If a sequence is given, a is used. If you have a malformed file with delimiters at the end of each line, you might consider index_col=False to force pandas to not use the first column as the index (row names)
+usecols : 类array类型,默认是None,返回列的子集.在这个array里面的元素,要么是与位置相关的(表明列的整形索引)或者是用户提供或者文档头行提供列名字的字符串.比如你可以用[0, 1, 2]或者[‘foo’, ‘bar’, ‘baz’]类似的索引形式.
+as_recarray : boolean, default False
+DEPRECATED: this argument will be removed in a future version. Please call pd.read_csv(…).to_records() instead.
+Return a NumPy recarray instead of a DataFrame after parsing the data. If set to True, this option takes precedence over the squeeze parameter. In addition, as row indices are not available in such a format, the index_col parameter will be ignored.
+squeeze : boolean, default False
+If the parsed data only contains one column then return a Series
+prefix : str, default None
+Prefix to add to column numbers when no header, e.g. ‘X’ for X0, X1, …
+mangle_dupe_cols : boolean, default True
+Duplicate columns will be specified as ‘X.0’…’X.N’, rather than ‘X’…’X’. Passing in False will cause data to be overwritten if there are duplicate names in the columns.
+dtype : Type name or dict of column -> type, default None
+Data type for data or columns. E.g. {‘a’: np.float64, ‘b’: np.int32} (Unsupported with engine=’python’). Use str or object to preserve and not interpret dtype.
+engine : {‘c’, ‘python’}, optional
+Parser engine to use. The C engine is faster while the python engine is currently more feature-complete.
+converters : dict, default None
+Dict of functions for converting values in certain columns. Keys can either be integers or column labels
+true_values : list, default None
+Values to consider as True
+false_values : list, default None
+Values to consider as False
+skipinitialspace : boolean, default False
+Skip spaces after delimiter.
+skiprows : 需要跳过的行数（从文件开始算起），这时候是一个整数。需要跳过的行号列表（索引从0开始），这个时候是一个列表。
+skipfooter : int, default 0
+Number of lines at bottom of file to skip (Unsupported with engine=’c’)
+skip_footer : int, default 0,已经弃用,使用上面的skipfooter
+nrows : 需要读取的行数（从文件开始出算起），对于读取大文件非常有用
+na_values : scalar, str, list-like, or dict, default None
+Additional strings to recognize as NA/NaN. If dict passed, specific per-column NA values. By default the following values are interpreted as NaN: ‘’, ‘#N/A’, ‘#N/A N/A’, ‘#NA’, ‘-1.#IND’, ‘-1.#QNAN’, ‘-NaN’, ‘-nan’,
+‘1.#IND’, ‘1.#QNAN’, ‘N/A’, ‘NA’, ‘NULL’, ‘NaN’, ‘nan’`.
+keep_default_na : bool, default True
+If na_values are specified and keep_default_na is False the default NaN values are overridden, otherwise they’re appended to.
+na_filter : boolean, default True
+Detect missing value markers (empty strings and the value of na_values). In data without any NAs, passing na_filter=False can improve the performance of reading a large file
+verbose : boolean, default False
+Indicate number of NA values placed in non-numeric columns
+skip_blank_lines : boolean, default True
+If True, skip over blank lines rather than interpreting as NaN values
+parse_dates : boolean or list of ints or names or list of lists or dict, default False
+boolean. If True -> try parsing the index.
+list of ints or names. e.g. If [1, 2, 3] -> try parsing columns 1, 2, 3 each as a separate date column.
+list of lists. e.g. If [[1, 3]] -> combine columns 1 and 3 and parse as
+a single date column.
+dict, e.g. {‘foo’ : [1, 3]} -> parse columns 1, 3 as date and call result ‘foo’
+Note: A fast-path exists for iso8601-formatted dates.
+infer_datetime_format : boolean, default False
+If True and parse_dates is enabled, pandas will attempt to infer the format of the datetime strings in the columns, and if it can be inferred, switch to a faster method of parsing them. In some cases this can increase the parsing speed by ~5-10x.
+keep_date_col : boolean, default False
+If True and parse_dates specifies combining multiple columns then keep the original columns.
+date_parser : function, default None
+Function to use for converting a sequence of string columns to an array of datetime instances. The default uses dateutil.parser.parser to do the conversion. Pandas will try to call date_parser in three different ways, advancing to the next if an exception occurs: 1) Pass one or more arrays (as defined by parse_dates) as arguments; 2) concatenate (row-wise) the string values from the columns defined by parse_dates into a single array and pass that; and 3) call date_parser once for each row using one or more strings (corresponding to the columns defined by parse_dates) as arguments.
+dayfirst : boolean, default False
+DD/MM format dates, international and European format
+iterator : boolean, default False
+Return TextFileReader object for iteration or getting chunks with get_chunk().
+chunksize :文件快的大小（用于迭代）
+compression : {‘infer’, ‘gzip’, ‘bz2’, ‘zip’, ‘xz’, None}, default ‘infer’
+For on-the-fly decompression of on-disk data. If ‘infer’, then use gzip, bz2, zip or xz if filepath_or_buffer is a string ending in ‘.gz’, ‘.bz2’, ‘.zip’, or ‘xz’, respectively, and no decompression otherwise. If using ‘zip’, the ZIP file must contain only one data file to be read in. Set to None for no decompression.
+New in version 0.18.1: support for ‘zip’ and ‘xz’ compression.
+thousands : str, default None
+Thousands separator
+decimal : str, default ‘.’
+Character to recognize as decimal point (e.g. use ‘,’ for European data).
+float_precision : string, default None
+Specifies which converter the C engine should use for floating-point values. The options are None for the ordinary converter, high for the high-precision converter, and round_trip for the round-trip converter.
+lineterminator : str (length 1), default None
+Character to break file into lines. Only valid with C parser.
+quotechar : str (length 1), optional
+The character used to denote the start and end of a quoted item. Quoted items can include the delimiter and it will be ignored.
+quoting : int or csv.QUOTE_* instance, default 0
+Control field quoting behavior per csv.QUOTE_* constants. Use one of QUOTE_MINIMAL (0), QUOTE_ALL (1), QUOTE_NONNUMERIC (2) or QUOTE_NONE (3).
+doublequote : boolean, default True
+When quotechar is specified and quoting is not QUOTE_NONE, indicate whether or not to interpret two consecutive quotechar elements INSIDE a field as a single quotechar element.
+escapechar : str (length 1), default None
+One-character string used to escape delimiter when quoting is QUOTE_NONE.
+comment : str, default None
+Indicates remainder of line should not be parsed. If found at the beginning of a line, the line will be ignored altogether. This parameter must be a single character. Like empty lines (as long as skip_blank_lines=True), fully commented lines are ignored by the parameter header but not by skiprows. For example, if comment=’#’, parsing ‘#emptyna,b,cn1,2,3’ with header=0 will result in ‘a,b,c’ being treated as the header.
+encoding : str类型,默认是None,当读取和写入的时候回使用UTF来解码.你也可以自己指定,你如GBK编码的话,你可以使用encoding=”gbk”
+dialect : str or csv.Dialect instance, default None
+If None defaults to Excel dialect. Ignored if sep longer than 1 char See csv.Dialect documentation for more details
+tupleize_cols : boolean, default False
+Leave a list of tuples on columns as is (default is to convert to a Multi Index on the columns)
+error_bad_lines : boolean, default True
+Lines with too many fields (e.g. a csv line with too many commas) will by default cause an exception to be raised, and no DataFrame will be returned. If False, then these “bad lines” will dropped from the DataFrame that is returned. (Only valid with C parser)
+warn_bad_lines : boolean, default True
+If error_bad_lines is False, and warn_bad_lines is True, a warning for each “bad line” will be output. (Only valid with C parser).
+low_memory : boolean, default True
+Internally process the file in chunks, resulting in lower memory use while parsing, but possibly mixed type inference. To ensure no mixed types either set False, or specify the type with the dtype parameter. Note that the entire file is read into a single DataFrame regardless, use the chunksize or iterator parameter to return the data in chunks. (Only valid with C parser)
+memory_map : boolean, default False
+If a filepath is provided for filepath_or_buffer, map the file object directly onto memory and access the data directly from there. Using this option can improve performance because there is no longer any I/O overhead.
+返回：
+DataFrame类型的对象
+
+我这里有一个200多万行数据的.csv，大概有30多个属性。用来做实验。
+例一：
+
+# -*- coding: utf-8 -*-
+import numpy as np
+import pandas as pd
+import os
+
+#load .csv
+df=pd.read_csv("200W.csv")
+print("type of df",type(df))
+value=df.values
+print("type of value:",type(value))
+print("shape of value:",value.shape)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+结果：
+
+首选载入pandas包的地方就不说了，看载入的函数，df=pd.read_csv("200W.csv") 这里什么选项都没有做，仅仅是传入了.csv的文件的名称。其实这样就够了，他会返回一个DataFrame的对象，这个是pandas的一个数据结构。更多的话可以深入看一下pandas这个库，挺好用挺方便，这里就不多说了。包括输出df的类型，也是输出的DataFrame。然后DataFrame有一个属性values，就是把其中的数据以ndarray的形式返回，这就是我们要的东东。value=df.values 之后，我们就相当于把所有的.scv文件都载入到一个ndarray对象里面去了。
+但是我在运行的时候，内存差点爆了，因为毕竟似乎200万行的数据。电脑好一点随意，不怎么好的话，就要考虑到省内存的一些东西了。
+你会发现这个函数超多的参数，在上面的例子里面我们一个都没有用上，这里重点讲几个，其他的自己需要的时候看文档。
+
+例二：
+
+import numpy as np
+import pandas as pd
+import os
+
+#load .csv
+df=pd.read_csv("200W.csv",nrows=400,usecols=(0,1,2,5,6))
+print("type of df",type(df))
+value=df.values
+print("type of value:",type(value))
+print("shape of value:",value.shape)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+仅仅在后面加了两个参数，nrows=400,表示我只想读取400行，usecols的列表表示我只需要（0，1，2，3，6）这几列。速度立马加快了很多。
+所以有时候分析你需要的是什么也是很重要的。还有很多参数有各种各样的用法，自己去组合吧。
+
+三.mat文件
+.mat文件是MATLAB存储数据的标准格式，很多的机器学习任务用.MAT来存出数据文件。python的scipy中有专门的函数来方便.mat的文件的载入和存储。
+还是按照上面的惯例，直接把函数给出来然后给出两个例子。
+scipy.io.loadmat(file_name, mdict=None, appendmat=True, **kwargs)
+
+作用：载入MATLAB文件
+参数：
+file_name : MATLAB文件名（如果appendmat=True的话，不要.mat的后缀），也能够传入open过得文件对象。
+mdict : dict, optional
+Dictionary in which to insert matfile variables.
+appendmat : 如果是true的话，后面就不用加上.mat的后缀了
+byte_order : str or None, optional
+None by default, implying byte order guessed from mat file. Otherwise can be one of (‘native’, ‘=’, ‘little’, ‘<’, ‘BIG’, ‘>’).
+mat_dtype : bool, optional
+If True, return arrays in same dtype as would be loaded into MATLAB (instead of the dtype with which they are saved).
+squeeze_me : bool, optional
+Whether to squeeze unit matrix dimensions or not.
+chars_as_strings : bool, optional
+Whether to convert char arrays to string arrays.
+matlab_compatible : bool, optional
+Returns matrices as would be loaded by MATLAB (implies squeeze_me=False, chars_as_strings=False, mat_dtype=True, struct_as_record=True).
+struct_as_record : bool, optional
+Whether to load MATLAB structs as numpy record arrays, or as old-style numpy arrays with dtype=object. Setting this flag to False replicates the behavior of scipy version 0.7.x (returning numpy object arrays). The default setting is True, because it allows easier round-trip load and save of MATLAB files.
+verify_compressed_data_integrity : bool, optional
+Whether the length of compressed sequences in the MATLAB file should be checked, to ensure that they are not longer than we expect. It is advisable to enable this (the default) because overlong compressed sequences in MATLAB files generally indicate that the files have experienced some sort of corruption.
+variable_names : None or sequence
+If None (the default) - read all variables in file. Otherwise variable_names should be a sequence of strings, giving names of the matlab variables to read from the file. The reader will skip any variable with a name not in this sequence, possibly saving some read processing.
+返回:
+mat_dict : 返回的是一个字典，变量名作为键，载入的矩阵作为值。
+
+scipy.io.savemat(file_name, mdict, appendmat=True, format=’5’, long_field_names=False, do_compression=False, oned_as=’row’)
+
+作用：保存一个带有名称和序列的字典到.mat文件中
+参数:
+file_name : str or file-like object
+Name of the .mat file (.mat extension not needed if appendmat == True). Can also pass open file_like object.
+mdict : dict
+Dictionary from which to save matfile variables.
+appendmat : bool, optional
+True (the default) to append the .mat extension to the end of the given filename, if not already present.
+format : {‘5’, ‘4’}, string, optional
+‘5’ (the default) for MATLAB 5 and up (to 7.2), ‘4’ for MATLAB 4 .mat files.
+long_field_names : bool, optional
+False (the default) - maximum field name length in a structure is 31 characters which is the documented maximum length. True - maximum field name length in a structure is 63 characters which works for MATLAB 7.6+.
+do_compression : bool, optional
+Whether or not to compress matrices on write. Default is False.
+oned_as : {‘row’, ‘column’}, optional
+If ‘column’, write 1-D numpy arrays as column vectors. If ‘row’, write 1-D numpy arrays as row vectors.
+
+例一：基本的读取测试
+
+# -*- coding: utf-8 -*-
+import numpy as np
+from scipy.io import loadmat
+from scipy.io import savemat
+
+result_dict=loadmat("train")
+
+#查看有返回的类型和他的键
+print("type of reuslt:",type(result_dict))
+print("keys:",result_dict.keys())
+
+
+
+#'X', '__header__', 'y', '__globals__', '__version__']
+#查看键的内容
+#X
+print("X:",result_dict['X'])
+print("type of X:",type(result_dict['X']))
+print("shape of X:",result_dict['X'].shape)
+
+#Y
+print("y:",result_dict['y'])
+print("type of y:",type(result_dict['y']))
+print("shape of y:",result_dict['y'].shape)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+结果：
+
+程序很简单，就不解释啦，但是结果可以给一些信息。就是这个函数一般返回的是一个字典，所以你要用字典的方式从里面取出数据。然后数据的矩阵也是很标准的ndarray，就很方便了。
+————————————————
+版权声明：本文为CSDN博主「谢小小XH」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/xierhacker/java/article/details/53201308
