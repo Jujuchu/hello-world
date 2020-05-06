@@ -1,0 +1,9 @@
+Or use this code first check file exists or not, then do create it. 
+
+import os.path
+file_exists = os.path.isfile(filename) 
+
+if file_exists:
+    # do something
+else:
+    # do something else
