@@ -1,0 +1,309 @@
+1. 我们开始猜数字吧
+In [ ]:
+# 要求：
+# 1. 使用模块 random，生成 1-100 之间的一个随机数并赋值给 变量A，作为之后要猜的数字；
+# 2. 使用 input 函数提示用户输入一个数字，将用户输入的字符串类型的内容使用 int() 函数转换成数字类型并赋值给 变量B；
+# 3. 将 变量B 与 变量A 进行比较，用 if, elif, else 语句判断大小，并输出猜的数字大于/小于/等于 变量A；
+# 4.  将步骤 2 和 3 中实现的代码放入 while 循环中，使得用户可以反复猜数字（注意要将程序生成的随机数放在循环外面，避免每次循环内部都重新生成随机数）；
+# 5. 当猜中后，退出 while 循环；
+In [15]:
+import random
+A = random.randint(1,100)
+print(A)
+while True:
+    B = int(input("你觉得A是多少呢(小提示：1-100的整数)？")) 
+    if A<B:
+        print("太大了")
+        continue
+    if A == B:
+        print("bingo")
+        break
+    else : 
+        print("太小了")
+3
+你觉得A是多少呢(小提示：1-100的整数)？1
+太小了
+你觉得A是多少呢(小提示：1-100的整数)？2
+太小了
+你觉得A是多少呢(小提示：1-100的整数)？4
+太大了
+你觉得A是多少呢(小提示：1-100的整数)？3
+bingo
+
+
+2. 只来一局不过瘾
+In [ ]:
+# 要求
+# 程序在用户猜中答案后，输出猜中答案一共猜了多少轮（用户每输入一次计做一轮），并可以反复进行游戏（用户猜中一次后可选择“继续”还是“退出”）
+In [2]:
+import random
+while True:
+    A = random.randint(1,100)
+    print(A)
+    times = 0
+    while True:
+        times +=1
+        B = int(input("请猜一个1-100的数字："))
+        if A<B:
+            print("太大了")
+            continue
+        if A == B:
+            print("猜对了，你一共猜了{}轮".format(times))
+            break
+        else : 
+            print("太小了")
+    flag = input("是否退出游戏，输入y继续，其他退出")
+    if flag == 'y':
+        continue
+    else:
+        print("游戏已退出，欢迎下次再来")
+        break
+81
+请猜一个1-100的数字：2
+太小了
+请猜一个1-100的数字：45
+太小了
+请猜一个1-100的数字：99
+太大了
+请猜一个1-100的数字：80
+太小了
+请猜一个1-100的数字：81
+猜对了，你一共猜了5轮
+是否退出游戏，输入y继续，其他退出i
+游戏已退出，欢迎下次再来
+
+3. 记录你的成绩
+In [ ]:
+#要求
+#统计游戏数据：玩家姓名、总游戏次数（玩家每猜中答案算玩了一次游戏）、
+#总游戏轮数（玩家每猜一个数字算玩了一轮游戏）、最快猜中轮数，并将结果保存在文件中
+In [26]:
+import random
+import pandas as pd
+
+
+#game_info = {'玩家姓名':[],'总游戏次数':[],'最快猜出的轮数':[],'总游戏轮数':[]}
+player = input("请输入你的名字：")
+
+gameTimes = 0     # 总游戏轮数
+fastTimes = 1000  # 最快猜中轮数
+timeTimes = 0     # 总游戏轮数
+
+
+
+while True:
+    A = random.randint(1,100)
+    gameTimes += 1
+    print(A)
+    times = 0     # 每次游戏轮数
+    
+    
+    while True:
+        timeTimes +=1
+        times +=1
+        B = int(input("请猜一个1-100的数字："))
+        if A<B:
+            print("太大了")
+            continue
+        if A == B:            
+            if fastTimes > times:
+                fastTimes = times
+            print("猜对了，你一共猜了{}轮".format(timeTimes))
+            print("nb，你已经玩了{}次，最少{}轮猜出答案，平均{}轮猜出答案".format(gameTimes,fastTimes,timeTimes/gameTimes))
+#             game_info.get('玩家姓名').append(player)
+#             game_info.get('总游戏次数').append(gameTimes)
+#             game_info.get('最快猜出的轮数').append(fastTimes)
+#             game_info.get("总游戏轮数").append(timeTimes)            
+            result = player+" "+str(gameTimes)+" "+str(fastTimes)+" "+str(timeTimes)
+            path = r'game_one_user.txt' #文件路径
+            f = open(path,'w',encoding='utf-8')
+            f.write(result)
+            f.close()
+            break            
+        else : 
+            print("太小了")
+            
+            
+    flag = input("是否退出游戏，输入y继续，其他退出")
+    if flag == 'y':       
+        continue        
+    else:
+        print("游戏已退出，欢迎下次再来！")
+        break
+请输入你的名字：vader
+28
+请猜一个1-100的数字：49
+太大了
+请猜一个1-100的数字：1
+太小了
+请猜一个1-100的数字：55
+太大了
+请猜一个1-100的数字：28
+猜对了，你一共猜了4轮
+nb，你已经玩了1次，最少4轮猜出答案，平均4.0轮猜出答案
+是否退出游戏，输入y继续，其他退出o
+游戏已退出，欢迎下次再来！
+
+4. 你的最好成绩
+In [ ]:
+# 要求：进入游戏时，从文件读取历史游戏记录，并将游戏数据赋值给一个字典（请大家统一读写上次任务中写入的 game_one_user.txt，以方便老师批改作业）
+     # 就是在开始玩之前读取txt里的历史记录并载入，完了再开始玩
+In [40]:
+def history():
+    with open("game_one_user.txt") as f:
+        data = f.read()
+        lstA = data.split()
+        dicA = {}
+        if int(lstA[1]) > 0:
+            print(lstA)
+            dicA = {lstA[0]:lstA[1:]}
+            avg_times = int(lstA[3])/int(lstA[1])
+            
+            print("{},你已经玩了{}次,最少{}轮猜出答案,平均{}轮猜出答案，开始游戏！".format(lstA[0],lstA[1],lstA[2],lstA[3]))
+            return dicA
+        else:
+            print("之前没有有效游戏记录哟~")
+            dicA = {"vader":[0,0,0]}
+            
+def game_body(dicNow):
+    
+    player = input("请输入你的名字：")
+    if int(dicNow["spacingout"][1]) >0:
+        gameTimes = int(dicNow[player][0])    # 总游戏次数
+        fastTimes = int(dicNow[player][1])    # 最快猜中轮数
+        timeTimes = int(dicNow[player][2])    # 总游戏轮数
+    else:
+        gameTimes = 0                  
+        fastTimes = 1000        
+        timeTimes = 0   
+
+    while True:
+        A = random.randint(1,100)
+        gameTimes += 1
+        print(A)
+        times = 0     # 每次游戏轮数
+        while True:
+            timeTimes +=1
+            times +=1
+            B = int(input("请猜一个1-100的数字："))
+            if A<B:
+                print("太大了")
+                continue
+            if A == B:            
+                if fastTimes > times:
+                    fastTimes = times
+                print("猜对了，你一共猜了{}轮".format(timeTimes))
+                print("nb，你已经玩了{}次，最少{}轮猜出答案，平均{}轮猜出答案".format(gameTimes,fastTimes,timeTimes/gameTimes))            
+                result = player+" "+str(gameTimes)+" "+str(fastTimes)+" "+str(timeTimes)
+                path = r'game_one_user.txt' #文件路径
+                f = open(path,'w',encoding='utf-8')
+                f.write(result)
+                f.close()
+                break            
+            else : 
+                print("太小了")
+        flag = input("是否退出游戏，输入y继续，其他退出")
+        if flag == 'y':       
+            continue        
+        else:
+            print("游戏已退出，欢迎下次再来！")
+            break
+            
+dicNow = history()  
+game_body(dicNow)
+['spacingout', '2', '1', '7']
+spacingout,你已经玩了2次,最少1轮猜出答案,平均7轮猜出答案，开始游戏！
+请输入你的名字：spacingout
+75
+请猜一个1-100的数字：4
+太小了
+请猜一个1-100的数字：75
+猜对了，你一共猜了9轮
+nb，你已经玩了3次，最少1轮猜出答案，平均3.0轮猜出答案
+是否退出游戏，输入y继续，其他退出o
+游戏已退出，欢迎下次再来！
+
+5. 请朋友来玩
+In [ ]:
+#进入游戏时，输入玩家昵称，按玩家昵称读取之前的游戏数据。结束游戏后，根据玩家昵称，保存玩家的游戏数据到文本（请大家统一读写文件 game_many_user.txt,
+#如果没有文件 game_many_user.txt，请手动新建）
+In [57]:
+def historyMany():
+    with open('game_many_user.txt') as f:
+        data = f.readlines()
+        
+    dicA = {}
+    for item in data:
+        temp = item.strip("\n").split()
+        dicA[temp[0]]=temp[1:]
+    print("现有历史记录为\n")
+    print(data)
+    return dicA
+
+def game_body(dicNow):
+    
+    player = input("请输入你的名字：")
+    if dicNow.get(player):
+        print("记录里有你的名字耶，你的游戏记录已载入~")
+        gameTimes = int(dicNow[player][0])    # 总游戏次数
+        fastTimes = int(dicNow[player][1])    # 最快猜中轮数
+        timeTimes = int(dicNow[player][2])    # 总游戏轮数
+    else:
+        print("记录里没有你的名字哦，已为你建立新的存档~")
+        dicNow[player] =[0,0,0]
+        gameTimes = 0                  
+        fastTimes = 1000        
+        timeTimes = 0   
+
+    while True:
+        A = random.randint(1,100)
+        gameTimes += 1
+        print(A)
+        times = 0     # 每次游戏轮数
+        while True:
+            timeTimes +=1
+            times +=1
+            B = int(input("请猜一个1-100的数字："))
+            if A<B:
+                print("太大了")
+                continue
+            if A == B:            
+                if fastTimes > times:
+                    fastTimes = times
+                print("猜对了，你一共猜了{}轮".format(timeTimes))
+                print("nb，你已经玩了{}次，最少{}轮猜出答案，平均{}轮猜出答案".format(gameTimes,fastTimes,round(timeTimes/gameTimes,2)))            
+                dicNow[player][0] = str(gameTimes)
+                dicNow[player][1] = str(fastTimes)
+                dicNow[player][2] = str(timeTimes)
+                result = ""
+                for k,v in dicNow.items():
+                    item = k+" "+ " ".join(v)+"\n"
+                    result += item                
+                path = r'game_many_user.txt' #文件路径
+                f = open(path,'w',encoding='utf-8')
+                f.write(result)
+                f.close()
+                break            
+            else: 
+                print("太小了")
+        flag = input("是否退出游戏，输入y继续，其他退出")
+        if flag == 'y':       
+            continue        
+        else:
+            print("游戏已退出，欢迎下次再来！")
+            break
+
+dicNow = historyMany()  
+game_body(dicNow)
+现有历史记录为
+
+['spacingout 4 1 10\n', 'vader 2 5 8\n', 'liubei 4 9 13\n']
+请输入你的名字：huamulan
+记录里没有你的名字哦，已为你建立新的存档~
+37
+请猜一个1-100的数字：37
+猜对了，你一共猜了1轮
+nb，你已经玩了1次，最少1轮猜出答案，平均1.0轮猜出答案
+是否退出游戏，输入y继续，其他退出o
+游戏已退出，欢迎下次再来！
+In [ ]:
